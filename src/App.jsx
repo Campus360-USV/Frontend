@@ -1,99 +1,18 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-
-function App() {
-  const [echipamente, setEchipamente] = useState([]);
-  const [formData, setFormData] = useState({ id: '', nume: '', tip: '' });
-
-  // READ - Obținem echipamentele de la backend
-  const fetchEchipamente = async () => {
-    try {
-      const response = await axios.get('/api/echipamente');
-      setEchipamente(response.data);
-    } catch (error) {
-      console.error("Eroare la obținerea datelor:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchEchipamente();
-  }, []);
-
-  // CREATE - Adăugăm un echipament nou
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post('/api/echipamente', formData);
-      setFormData({ id: '', nume: '', tip: '' }); // resetăm formularul
-      fetchEchipamente(); // reîncărcăm lista
-    } catch (error) {
-      console.error("Eroare la adăugare:", error);
-    }
-  };
-
-  // DELETE - Ștergem un echipament
-  const handleDelete = async (id) => {
-    try {
-      await axios.delete(`/api/echipamente/${id}`);
-      fetchEchipamente(); // reîncărcăm lista
-    } catch (error) {
-      console.error("Eroare la ștergere:", error);
-    }
-  };
-
-  return (
-    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h1>Gestionare Echipamente (Aplicație de Start)</h1>
-      
-      {/* Formularul de adăugare */}
-      <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
-        <input 
-          type="number" 
-          placeholder="ID" 
-          value={formData.id} 
-          onChange={(e) => setFormData({ ...formData, id: e.target.value })} 
-          required 
-          style={{ marginRight: '10px' }}
-        />
-        <input 
-          type="text" 
-          placeholder="Nume Echipament" 
-          value={formData.nume} 
-          onChange={(e) => setFormData({ ...formData, nume: e.target.value })} 
-          required 
-          style={{ marginRight: '10px' }}
-        />
-        <input 
-          type="text" 
-          placeholder="Tip" 
-          value={formData.tip} 
-          onChange={(e) => setFormData({ ...formData, tip: e.target.value })} 
-          style={{ marginRight: '10px' }}
-        />
-        <button type="submit">Adaugă</button>
-      </form>
-
-      {/* Lista de echipamente */}
-      <h3>Lista Echipamente</h3>
-      <ul>
-        {echipamente.length === 0 ? (
-          <p>Nu există echipamente în baza de date.</p>
-        ) : (
-          echipamente.map((echipament) => (
-            <li key={echipament.id} style={{ marginBottom: '10px' }}>
-              <strong>{echipament.id}</strong>: {echipament.nume} ({echipament.tip})
-              <button 
-                onClick={() => handleDelete(echipament.id)} 
-                style={{ marginLeft: '15px', color: 'red' }}
-              >
-                Șterge
-              </button>
-            </li>
-          ))
-        )}
-      </ul>
-    </div>
-  );
-}
-
-export default App;
+import React,{useEffect,useMemo,useState} from 'react';
+import {BrowserRouter,Link,NavLink,Navigate,Route,Routes,useNavigate,useParams} from 'react-router-dom';
+import {University,Search,CalendarDays,Monitor,ClipboardList,HelpCircle,LogOut,Bell,ArrowRight,ArrowLeft,Plus,Check,X,Settings2,ChevronLeft,ChevronRight,Eye,EyeOff,Info,Menu,ShieldCheck} from 'lucide-react';
+import {auth,labs,equipment,reservations,errText,asArray,normalizeLab,normalizeReservation} from './api.js';
+const HAS_BOOKING=false;
+const today=()=>new Date().toISOString().slice(0,10);
+const stored=()=>{try {return sessionStorage.getItem('rrm-token')?JSON.parse(sessionStorage.getItem('rrm-user')):null;}catch{return null;}};
+function useRemote(fetcher,trigger=0){const [state,setState]=useState({data:[],loading:true,error:''});useEffect(()=>{let mounted=true;setState(s=>({...s,loading:true,error:''}));fetcher().then(data=>{if(mounted)setState({data:asArray(data),loading:false,error:''});}).catch(e=>{if(mounted)setState({data:[],loading:false,error:errText(e)});});return()=>{mounted=false};},[trigger]);return state;}
+function Title({name,sub,action}){return <div className="page-title"><div><h1>{name}</h1><p>{sub}</p></div>{action}</div>}
+function Message({text}){return text?<div className="alert" role="alert"><Info size={16}/>{text}</div>:null}
+function Empty({children}){return <div className="empty">{children}</div>}
+function Login({onLogin}){const[email,setEmail]=useState('');const[password,setPassword]=useState('');const[visible,setVisible]=useState(false);const[error,setError]=useState('');const[busy,setBusy]=useState(false);async function submit(e){e.preventDefault();setBusy(true);setError('');try{const result=await auth.login(email,password);if(!result.token)throw new Error('Backendul nu a returnat JWT.');onLogin({email,name:email.split('@')[0],role:String(result.rol??result.role??'student').toLowerCase()},result.token)}catch(e){setError(errText(e));}finally{setBusy(false)}}return <div className="login-page"><div className="login-panel"><header className="login-head"><span className="brand"><University size={24}/><strong>Resurse de cercetare</strong></span><span>Universitatea Ștefan cel Mare</span></header><div className="login-columns"><section className="login-promo"><div className="eyebrow">FACULTATEA DE INGINERIE ELECTRICĂ ȘI ȘTIINȚA CALCULATOARELOR</div><h1>Un singur loc pentru<br/>resursele laboratorului.</h1><p>Găsește un laborator și solicită o rezervare pentru activități didactice, proiecte sau cercetare.</p><div className="benefits"><div><Search/><span><b>Găsește spațiul potrivit</b><small>Caută după nume, capacitate sau locație.</small></span></div><div><CalendarDays/><span><b>Planifică o activitate</b><small>Alege data și intervalul orar necesar.</small></span></div><div><ClipboardList/><span><b>Primește confirmarea</b><small>Responsabilul verifică solicitarea.</small></span></div></div></section><section className="login-form"><h2>Bine ai venit</h2><p>Autentifică-te cu datele contului instituțional.</p><form onSubmit={submit}><label>Adresă de e-mail instituțională<input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="nume@student.usv.ro" required/></label><label>Parolă<div className="password"><input type={visible?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} required placeholder="Introdu parola"/><button type="button" className="icon-btn" onClick={()=>setVisible(!visible)} aria-label="Arată parola">{visible?<Eye size={16}/>:<EyeOff size={16}/>}</button></div></label><div className="between"><label className="inline-check"><input type="checkbox"/> Rămâi autentificat</label><span className="muted">Ai uitat parola?</span></div><Message text={error}/><button className="primary full" disabled={busy}>{busy?'Se conectează...':'Autentificare'}</button><p className="caption">Login prin API real: POST /api/login.</p></form><div className="support">Probleme de acces? Contactează suportul IT.</div></section></div><footer className="login-foot"><span>© 2026 Universitatea Ștefan cel Mare</span><span>Confidențialitate · Regulament de utilizare</span></footer></div></div>}
+function Shell({user,onLogout}){const[open,setOpen]=useState(false);const[notifs,setNotifs]=useState(false);const admin=user.role==='admin';const nav=[['/laboratoare',University,'Laboratoare'],...(HAS_BOOKING?[['/rezervari',ClipboardList,'Rezervările mele'],['/calendar',CalendarDays,'Calendar']]:[]),['/echipamente',Monitor,'Echipamente']];return <div className="shell"><aside className={'sidebar '+(open?'open':'')}><Link to="/laboratoare" className="brand" onClick={()=>setOpen(false)}><University size={23}/><span><b>Resurse de cercetare</b><small>Universitatea Ștefan cel Mare</small></span></Link><nav>{nav.map(([to,Icon,label])=><NavLink key={to} to={to} onClick={()=>setOpen(false)} className={({isActive})=>'nav-link '+(isActive?'active':'')}><Icon size={16}/>{label}</NavLink>)}{HAS_BOOKING&&admin&&<><div className="nav-heading">ADMINISTRARE</div><NavLink to="/admin/cereri" className={({isActive})=>'nav-link '+(isActive?'active':'')}><ClipboardList size={16}/>Cereri în așteptare</NavLink><NavLink to="/admin/resurse" className={({isActive})=>'nav-link '+(isActive?'active':'')}><Settings2 size={16}/>Gestionare resurse</NavLink></>}</nav><div className="sidebar-bottom"><Link to="/ajutor" className="nav-link"><HelpCircle size={16}/>Ajutor și contact</Link><div className="profile"><div className="avatar">{user.email.slice(0,2).toUpperCase()}</div><div><b>{user.name}</b><small>{admin?'Administrator':user.role==='profesor'?'Profesor':'Student'}</small></div><button className="icon-btn" title="Deconectare" onClick={onLogout}><LogOut size={17}/></button></div></div></aside><div className="workspace"><header className="topbar"><button className="icon-btn mobile-only" onClick={()=>setOpen(!open)}><Menu/></button><span>Facultatea de Inginerie Electrică și Știința Calculatoarelor</span><div className="topright"><span>{new Date().toLocaleDateString('ro-RO',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</span><button className="icon-btn" title="Notificări" onClick={()=>setNotifs(!notifs)}><Bell size={17}/></button></div></header>{notifs&&<div className="popover">Notificările în timp real necesită integrare backend.</div>}<main className="main"><Routes><Route path="/laboratoare" element={<LabsPage/>}/><Route path="/laboratoare/:id" element={<LabDetail/>}/><Route path="/echipamente" element={<EquipmentPage/>}/><Route path="/ajutor" element={<Help/>}/>{HAS_BOOKING&&<><Route path="/rezervari" element={<MyReservations/>}/><Route path="/rezervari/noua" element={<NewReservation/>}/><Route path="/calendar" element={<CalendarPage/>}/>{admin&&<><Route path="/admin/cereri" element={<AdminRequests/>}/><Route path="/admin/resurse" element={<AdminResources/>}/></>}</>}<Route path="*" element={<Navigate to="/laboratoare" replace/>}/></Routes></main></div></div>}
+function LabsPage(){const{data,loading,error}=useRemote(labs.list);const[query,setQuery]=useState('');const items=useMemo(()=>data.map(normalizeLab).filter(x=>[x.name,x.id,x.building,x.description,x.location].join(' ').toLowerCase().includes(query.toLowerCase())),[data,query]);return <><Title name="Găsește un laborator" sub="Spații și echipamente pentru activități didactice, proiecte și cercetare."/><div className="quick-links">{(HAS_BOOKING?[['/rezervari','Rezervările mele',ClipboardList],['/calendar','Calendar',CalendarDays]]:[]).concat([['/echipamente','Echipamente',Monitor],['/ajutor','Ajutor',HelpCircle]]).map(([url,label,Icon])=><Link className="quick" to={url} key={url}><Icon size={17}/>{label}<ArrowRight size={15}/></Link>)}</div><div className="two-col"><div><div className="search"><Search size={18}/><input placeholder="Caută: robotică, 24 locuri, corpul B..." value={query} onChange={e=>setQuery(e.target.value)}/></div><div className="muted topgap">{loading?'Se încarcă laboratoarele...':`${items.length} laboratoare disponibile în platformă`}</div><Message text={error}/><div className="panel lab-list">{items.map(l=><Link className="lab-row" key={l.id} to={'/laboratoare/'+encodeURIComponent(l.id)}><div><b>{l.name}</b><p>Corpul {l.building} · Etajul {l.floor} · {l.capacity} locuri</p><p>{typeof l.equipment==='string'?l.equipment:Array.isArray(l.equipment)?`${l.equipment.length} tipuri de echipamente`:l.description}</p></div><ArrowRight size={18}/></Link>)}{!loading&&!error&&!items.length&&<Empty>Nu există laboratoare de afișat. Verifică baza MySQL și endpointul GET /api/laboratoare.</Empty>}</div></div><aside className="sidecards"><div className="panel"><h3>Resurse de cercetare</h3><p>Consultă laboratoarele și selectează spațiul potrivit.</p><Link className="link" to="/echipamente">Vezi echipamentele <ArrowRight size={14}/></Link></div><div className="panel"><h3>Informații</h3><p>Lista provine din API-ul echipei. Disponibilitatea reală a unui laborator trebuie verificată prin sistemul de rezervări.</p></div></aside></div></>}
+function LabDetail(){const{id}=useParams();const[lab,setLab]=useState(null);const[error,setError]=useState('');const[loading,setLoading]=useState(true);useEffect(()=>{setLoading(true);labs.detail(id).then(res=>setLab(normalizeLab(res.laborator??res.data??res))).catch(e=>setError(errText(e))).finally(()=>setLoading(false));},[id]);return <><Link to="/laboratoare" className="link back"><ArrowLeft size={15}/> Înapoi la laboratoare</Link>{loading?<p>Se încarcă...</p>:<Message text={error}/ >}{lab&&!error&&<><Title name={lab.name} sub={`Corpul ${lab.building} · Etajul ${lab.floor} · ${lab.capacity} locuri`} action={HAS_BOOKING?<Link className="primary" to={'/rezervari/noua?laborator='+encodeURIComponent(lab.id)}><Plus size={17}/> Rezervare nouă</Link>:null}/><div className="two-col"><div className="panel padded"><h3>Detalii laborator</h3><p>{lab.description||'Nu există descriere disponibilă.'}</p><dl className="details"><dt>Cod</dt><dd>{lab.id}</dd><dt>Locație</dt><dd>{lab.location||`Corpul ${lab.building}, etaj ${lab.floor}`}</dd><dt>Capacitate</dt><dd>{lab.capacity} persoane</dd><dt>Responsabil</dt><dd>{lab.responsible||'Necompletat'}</dd></dl></div><div className="panel padded"><h3>Echipamente asociate</h3>{Array.isArray(lab.equipment)?(lab.equipment.length?lab.equipment.map((e,i)=><p key={i}>{typeof e==='string'?e:e.nume??e.name??JSON.stringify(e)}</p>):<p className="muted">Nespecificate în API.</p>):<p>{lab.equipment||'Nespecificate în API.'}</p>}</div></div></>}</>}
+function EquipmentPage(){const{data,loading,error}=useRemote(equipment.list);const[query,setQuery]=useState('');const[filter,setFilter]=useState('Toate');const rows=data.filter(e=>[e.nume,e.tip,e.name].join(' ').toLowerCase().includes(query.toLowerCase())).filter(e=>filter==='Toate'||String(e.tip??'').toLowerCase().includes(filter==='Speciale'?'special':'implicit'));return <><Title name="Echipamente" sub="Descoperă dotările laboratoarelor și condițiile de utilizare."/><div className="search"><Search size={18}/><input placeholder="Caută un echipament sau un laborator..." value={query} onChange={e=>setQuery(e.target.value)}/></div><div className="tabs">{['Toate','Implicite','Speciale'].map(t=><button className={filter===t?'active':''} key={t} onClick={()=>setFilter(t)}>{t}</button>)}</div><p className="muted">{loading?'Se încarcă echipamentele...':`${rows.length} tipuri de echipamente`}</p><Message text={error}/><div className="panel table-wrap"><table><thead><tr><th>Echipament</th><th>Categorie / tip</th><th>Laborator</th><th>Cantitate</th></tr></thead><tbody>{rows.map((e,i)=><tr key={e.id??i}><td><b>{e.nume??e.name??'Echipament'}</b></td><td>{e.tip??'—'}</td><td>{e.laborator??e.id_laborator??'Neatribuit'}</td><td>{e.cantitate??'—'}</td></tr>)}</tbody></table>{!loading&&!error&&!rows.length&&<Empty>Nu există echipamente în răspunsul API. Poți adăuga în MySQL folosind endpointul de echipamente.</Empty>}</div><div className="notice"><Info size={18}/> Datele afișate sunt citite din GET /api/echipamente. Câmpurile indisponibile în backend rămân necompletate.</div></>}
+function Help(){return <><Title name="Ajutor și contact" sub="Informații despre utilizarea platformei."/><div className="panel padded"><h3>Cum folosesc platforma?</h3><p>Autentifică-te, caută laboratorul dorit și consultă echipamentele disponibile.</p>{HAS_BOOKING&&<p>Din pagina laboratorului poți solicita o rezervare, iar apoi îi urmărești starea în Rezervările mele.</p>}<p>Contactează responsabilul de laborator pentru informații suplimentare.</p></div></>}
+export default function App(){const[user,setUser]=useState(stored);const navigate=useNavigate();function logIn(account,token){sessionStorage.setItem('rrm-token',token);sessionStorage.setItem('rrm-user',JSON.stringify(account));setUser(account);navigate('/laboratoare')}function logOut(){sessionStorage.removeItem('rrm-token');sessionStorage.removeItem('rrm-user');setUser(null);navigate('/login')}return user?<Shell user={user} onLogout={logOut}/>:<Routes><Route path="*" element={<Login onLogin={logIn}/>}/></Routes>}
