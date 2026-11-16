@@ -1,16 +1,18 @@
-# React + Vite
+# Research Resource Manager — PR 1: fundatie si laboratoare
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Baza: Campus360-USV/Frontend. UI reproiectat dupa capturile Figma furnizate.
 
-Currently, two official plugins are available:
+## Pornire
+```
+npm install
+npm run build
+npm run dev
+```
+Backend-ul ruleaza separat pe localhost:3000; vite.config.js redirectioneaza `/api` spre acest backend. Datele nu sunt simulate: lipsa endpointurilor afiseaza eroare vizibila.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Login real: POST /api/login, corp { email, parola }. Conturi de test create de backendul echipei.
+- Laboratoare: GET /api/laboratoare si GET /api/laboratoare/:id (PR backend #4, in curs de revizuire la verificare).
+- Echipamente: GET /api/echipamente.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Observatii
+Foloseste acest ZIP ca un patch de fisiere peste un clone proaspat al repo-ului Frontend. Nu include .git, node_modules sau credentiale. Pentru al doilea PR porneste din main dupa merge-ul primului si aplica al doilea ZIP.
